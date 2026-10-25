@@ -1,0 +1,77 @@
+# Generate PadConnect.xcodeproj with: xcodegen
+name: PadConnect
+options:
+  bundleIdPrefix: com.csburton
+  deploymentTarget:
+    iOS: "17.0"
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+
+packages:
+  PadKit:
+    path: PadKit
+
+targets:
+  PadConnect:
+    type: application
+    platform: iOS
+    sources:
+      - App/Shared
+      - App/iOS
+    dependencies:
+      - package: PadKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.csburton.padconnect
+        PRODUCT_NAME: PadConnect
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      path: App/iOS/Info.plist
+      properties:
+        CFBundleDisplayName: PadConnect
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIBackgroundModes:
+          - bluetooth-central
+        NSBluetoothAlwaysUsageDescription: PadConnect uses Bluetooth to control your walking pad.
+        NSHealthShareUsageDescription: PadConnect saves your walks to Apple Health.
+        NSHealthUpdateUsageDescription: PadConnect saves your walks to Apple Health.
+    entitlements:
+      path: App/iOS/PadConnect.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+
+  PadConnectMac:
+    type: application
+    platform: macOS
+    sources:
+      - App/Shared
+      - App/macOS
+    dependencies:
+      - package: PadKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.csburton.padconnect.mac
+        PRODUCT_NAME: PadConnect
+    info:
+      path: App/macOS/Info.plist
+      properties:
+        CFBundleDisplayName: PadConnect
+        LSApplicationCategoryType: public.app-category.healthcare-fitness
+        NSBluetoothAlwaysUsageDescription: PadConnect uses Bluetooth to control your walking pad.
+    entitlements:
+      path: App/macOS/PadConnect.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.device.bluetooth: true
