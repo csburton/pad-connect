@@ -33,6 +33,10 @@ With a free Apple ID, apps installed on the phone stop launching after 7 days an
 
 Run the protocol unit tests with `swift test` inside `PadKit/`.
 
+### Trying it without the pad
+
+The iOS Simulator has no Bluetooth, so in the Simulator the connect screen lists a **Simulated pad**. It behaves like the real one: it speeds up and slows down at about 0.5 km/h per second (including the wind-down after Stop) and makes up steps and heart rate. Finished walks save to the Simulator's Health app. On a real iPhone or Mac it never appears, and the Mac app uses the MacBook's own Bluetooth.
+
 ## How it talks to the pad
 
 The pad's Bluetooth module (FitShow) exposes two protocols. PadConnect uses the first and falls back to the second:
