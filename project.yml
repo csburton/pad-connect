@@ -27,10 +27,12 @@ targets:
     sources:
       - App/Shared
       - App/iOS
+      - App/LiveActivity
       - App/Resources
     dependencies:
       - package: PadKit
       - target: PadConnectWatch
+      - target: PadConnectWidgets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.csburton.padconnect
@@ -41,6 +43,7 @@ targets:
       properties:
         CFBundleDisplayName: PadConnect
         UILaunchScreen: {}
+        NSSupportsLiveActivities: true
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UISupportedInterfaceOrientations:
@@ -63,6 +66,25 @@ targets:
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
+
+  PadConnectWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - App/Widgets
+      - App/LiveActivity
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.csburton.padconnect.widgets
+        PRODUCT_NAME: PadConnectWidgets
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+    info:
+      path: App/Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: PadConnect
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
 
   PadConnectMac:
     type: application

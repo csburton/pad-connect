@@ -26,6 +26,7 @@ final class AppModel: ObservableObject {
     #if os(iOS)
     private let health = HealthWriter()
     let watch = WatchWorkoutLink()
+    private let liveActivity = WalkActivityController()
     #endif
 
     init() {
@@ -67,6 +68,9 @@ final class AppModel: ObservableObject {
         #if os(iOS)
         watch.send(.padUpdate(speedKmh: sample.speedKmh, distanceMeters: tracker.distanceMeters,
                               isBeltRunning: sample.speedKmh > 0))
+        let heartRate = watch.heartRate.map { Int($0.rounded()) } ?? sample.heartRate
+        liveActivity.start(tracker, speedKmh: sample.speedKmh, heartRate: heartRate)
+        liveActivity.update(tracker, speedKmh: sample.speedKmh, heartRate: heartRate)
         #endif
 
         if sample.speedKmh == 0, let last = tracker.lastMovingDate,
@@ -81,6 +85,7 @@ final class AppModel: ObservableObject {
         let finished = tracker
         let longEnough = finished.distanceMeters >= 10
         #if os(iOS)
+        liveActivity.end(finished, keepSummary: longEnough)
         if watch.isMirroring {
             // The Watch saves the workout, with its heart rate and the pad's distance.
             watch.send(longEnough ? .finish : .discard)
@@ -112,6 +117,7 @@ final class AppModel: ObservableObject {
         guard isSessionActive else { return }
         #if os(iOS)
         watch.send(.discard)
+        liveActivity.end(tracker, keepSummary: false)
         #endif
         endSession()
         tracker = WorkoutTracker(bodyMassKg: bodyMassKg)
@@ -146,6 +152,7 @@ final class AppModel: ObservableObject {
     private func watchEndedWalk() {
         guard isSessionActive else { return }
         endSession()
+        liveActivity.end(tracker, keepSummary: true)
         saveMessage = "Walk ended on your Apple Watch."
     }
     #endif

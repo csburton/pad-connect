@@ -10,4 +10,5 @@ App/macOS/Info.plist
 App/iOS/PadConnect.entitlements
 App/macOS/PadConnect.entitlements
 App/watchOS/Info.plist
+App/Widgets/Info.plist
 App/watchOS/PadConnect.entitlements
