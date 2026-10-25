@@ -1,0 +1,47 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Test PadKit
+        working-directory: PadKit
+        run: swift test
+
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen
+
+      - name: Build iOS app
+        run: |
+          xcodebuild build \
+            -project PadConnect.xcodeproj \
+            -scheme PadConnect \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO > ios-build.log 2>&1 \
+            || { grep -E 'error:' ios-build.log | sort -u; tail -20 ios-build.log; exit 1; }
+
+      - name: Build Mac app
+        run: |
+          xcodebuild build \
+            -project PadConnect.xcodeproj \
+            -scheme PadConnectMac \
+            -destination 'generic/platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO > mac-build.log 2>&1 \
+            || { grep -E 'error:' mac-build.log | sort -u; tail -20 mac-build.log; exit 1; }
