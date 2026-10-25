@@ -45,3 +45,13 @@ jobs:
             -destination 'generic/platform=macOS' \
             CODE_SIGNING_ALLOWED=NO > mac-build.log 2>&1 \
             || { grep -E 'error:' mac-build.log | sort -u; tail -20 mac-build.log; exit 1; }
+
+      - name: Build Watch app
+        run: |
+          xcodebuild build \
+            -project PadConnect.xcodeproj \
+            -scheme PadConnectWatch \
+            -destination 'generic/platform=watchOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO > watch-build.log 2>&1 \
+            || { grep -E 'error:' watch-build.log | sort -u; tail -20 watch-build.log; exit 1; }
+          grep -E 'BUILD SUCCEEDED' watch-build.log

@@ -1,6 +1,6 @@
 # PadConnect
 
-An English replacement for the "Sports Show" (运动秀 / FitShow) app that controls a Chaoke X386P walking pad over Bluetooth. It runs on iPhone and Mac, and the iPhone app saves each walk to Apple Health as an indoor walking workout.
+An English replacement for the "Sports Show" (运动秀 / FitShow) app that controls a Chaoke X386P walking pad over Bluetooth. It runs on iPhone, Apple Watch and Mac, and saves each walk to Apple Health as an indoor walking workout, with heart rate when you wear an Apple Watch.
 
 **Status:** first draft. The code was written without access to Xcode or the pad, so expect a round of small fixes the first time it is built and tried.
 
@@ -33,6 +33,23 @@ With a free Apple ID, apps installed on the phone stop launching after 7 days an
 
 Run the protocol unit tests with `swift test` inside `PadKit/`.
 
+### Trying it without the pad
+
+The iOS Simulator has no Bluetooth, so in the Simulator the connect screen lists a **Simulated pad**. It behaves like the real one: it speeds up and slows down at about 0.5 km/h per second (including the wind-down after Stop) and makes up steps and heart rate. Finished walks save to the Simulator's Health app. On a real iPhone or Mac it never appears, and the Mac app uses the MacBook's own Bluetooth.
+
+## Apple Watch
+
+If you have an Apple Watch, PadConnect works like gym equipment paired to your Watch:
+
+1. When the belt starts, the iPhone opens PadConnect on the Watch, which starts an indoor walk workout.
+2. The Watch records heart rate and calories. The iPhone sends it the pad's speed and distance every second, so distance comes from the belt rather than your wrist.
+3. The Watch shows time, speed, heart rate, distance and calories. Swipe up for − / +, start/stop belt and Finish.
+4. Finish on either device and one workout is saved to Health from the Watch, with heart rate and the pad's distance. The iPhone shows your heart rate while you walk.
+
+Without a Watch (or if the Watch app isn't installed) the iPhone saves the walk itself, as before.
+
+The Watch app is installed together with the iPhone app. In Xcode, run the **PadConnect** scheme on your iPhone; if it doesn't appear on the Watch, open the Watch app on the iPhone and install PadConnect from the "Available apps" list. It uses the same signing team as the iPhone app.
+
 ## How it talks to the pad
 
 The pad's Bluetooth module (FitShow) exposes two protocols. PadConnect uses the first and falls back to the second:
@@ -51,9 +68,12 @@ PadKit/                     Swift package with all the logic, unit-tested
   FTMS.swift                FTMS parsing and commands
   FitShow.swift             FitShow framing, commands and status parsing
   WorkoutTracker.swift      Turns readings into distance, calories, steps
+  WatchMessage.swift        What the iPhone and Watch send each other
   TreadmillController.swift CoreBluetooth: scan, connect, choose protocol, control
 App/Shared/                 SwiftUI app shared by iPhone and Mac
-App/iOS/HealthWriter.swift  Apple Health saving
+App/iOS/HealthWriter.swift  Apple Health saving (no Watch)
+App/iOS/WatchWorkoutLink.swift  Starts and mirrors the Watch workout
+App/watchOS/                Watch app: workout, heart rate, controls
 App/macOS/                  Menu bar controls
 project.yml                 XcodeGen project definition
 ```

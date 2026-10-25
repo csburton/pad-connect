@@ -101,42 +101,24 @@ struct ControlView: View {
         [2, 3, 4, 5, 6].filter { $0 >= pad.minimumSpeedKmh && $0 <= pad.maximumSpeedKmh }
     }
 
+    #if os(iOS)
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    private var isLandscapePhone: Bool { verticalSizeClass == .compact }
+    #else
+    private let isLandscapePhone = false
+    #endif
+
+    private var showsPausedCard: Bool { model.isSessionActive && !pad.isBeltRunning }
+
     var body: some View {
-        ScrollView {
-            VStack(spacing: 28) {
-                dial
-                presetRow
-                StartStopButton(isRunning: pad.isBeltRunning) {
-                    taps += 1
-                    model.toggleBelt()
-                }
-                .keyboardShortcut(.space, modifiers: [])
-
-                StatsRow(seconds: model.tracker.movingSeconds,
-                         meters: model.tracker.distanceMeters,
-                         kcal: model.tracker.activeKcal,
-                         steps: model.tracker.steps)
-                    .padding(.top, 4)
-
-                if model.isSessionActive && !pad.isBeltRunning {
-                    pausedCard
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-
-                if let error = pad.lastError {
-                    Text(error)
-                        .font(.footnote)
-                        .foregroundStyle(Theme.stop)
-                        .multilineTextAlignment(.center)
-                }
+        Group {
+            if isLandscapePhone {
+                landscapeLayout
+            } else {
+                portraitLayout
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 16)
-            .frame(maxWidth: 460)
-            .frame(maxWidth: .infinity)
-            .animation(.spring(duration: 0.4), value: model.isSessionActive && !pad.isBeltRunning)
         }
-        .scrollBounceBehavior(.basedOnSize)
+        .animation(.spring(duration: 0.4), value: showsPausedCard)
         .sensoryFeedback(.impact(weight: .light), trigger: taps)
         .confirmationDialog("Discard this walk?", isPresented: $confirmingDiscard, titleVisibility: .visible) {
             Button("Discard walk", role: .destructive) { model.discardSession() }
@@ -145,29 +127,94 @@ struct ControlView: View {
         }
     }
 
-    private var dial: some View {
-        ZStack(alignment: .bottom) {
-            SpeedDial(speed: pad.speedKmh, maximum: pad.maximumSpeedKmh)
-                .frame(maxWidth: .infinity)
+    private var portraitLayout: some View {
+        ScrollView {
+            VStack(spacing: 28) {
+                dial(size: 260)
+                    .padding(.top, 12)
+                controls
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+            .frame(maxWidth: 460)
+            .frame(maxWidth: .infinity)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+    }
+
+    /// iPhone on its side: dial on the left, everything else on the right.
+    private var landscapeLayout: some View {
+        GeometryReader { geometry in
+            HStack(spacing: 28) {
+                dial(size: min(max(geometry.size.height - 40, 160), 250))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                ScrollView {
+                    VStack(spacing: 18) {
+                        controls
+                    }
+                    .padding(.vertical, 16)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .frame(maxWidth: 420)
+            }
+            .padding(.horizontal, 24)
+        }
+    }
+
+    @ViewBuilder
+    private var controls: some View {
+        presetRow
+        StartStopButton(isRunning: pad.isBeltRunning, height: isLandscapePhone ? 50 : 58) {
+            taps += 1
+            model.toggleBelt()
+        }
+        .keyboardShortcut(.space, modifiers: [])
+
+        StatsRow(seconds: model.tracker.movingSeconds,
+                 meters: model.tracker.distanceMeters,
+                 kcal: model.tracker.activeKcal,
+                 steps: model.tracker.steps)
+            .padding(.top, 4)
+
+        #if os(iOS)
+        WatchHeartBadge(watch: model.watch)
+        #endif
+
+        if showsPausedCard {
+            pausedCard
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+
+        if let error = pad.lastError {
+            Text(error)
+                .font(.footnote)
+                .foregroundStyle(Theme.stop)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    private func dial(size: CGFloat) -> some View {
+        let buttonSize: CGFloat = size < 220 ? 46 : 56
+        return ZStack(alignment: .bottom) {
+            SpeedDial(speed: pad.speedKmh, maximum: pad.maximumSpeedKmh, size: size, lineWidth: size < 220 ? 11 : 14)
 
             HStack {
-                RoundIconButton(systemImage: "minus") {
+                RoundIconButton(systemImage: "minus", size: buttonSize) {
                     taps += 1
                     pad.adjustSpeed(by: -model.speedStepKmh)
                 }
                 .keyboardShortcut(.downArrow, modifiers: [])
                 Spacer()
-                RoundIconButton(systemImage: "plus") {
+                RoundIconButton(systemImage: "plus", size: buttonSize) {
                     taps += 1
                     pad.adjustSpeed(by: model.speedStepKmh)
                 }
                 .keyboardShortcut(.upArrow, modifiers: [])
             }
-            .frame(maxWidth: 300)
+            .frame(width: size + 40)
             .disabled(!pad.isBeltRunning)
             .opacity(pad.isBeltRunning ? 1 : 0.35)
         }
-        .padding(.top, 12)
     }
 
     private var presetRow: some View {
@@ -237,18 +284,25 @@ struct ConnectView: View {
         }
     }
 
-    var body: some View {
-        VStack(spacing: 28) {
-            Spacer(minLength: 20)
+    #if os(iOS)
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    private var compact: Bool { verticalSizeClass == .compact }
+    #else
+    private let compact = false
+    #endif
 
-            ZStack {
-                Circle().fill(Theme.accent.opacity(0.10)).frame(width: 150, height: 150)
-                Circle().fill(Theme.accent.opacity(0.14)).frame(width: 104, height: 104)
-                Image(systemName: "figure.walk")
-                    .font(.system(size: 48, weight: .medium))
-                    .foregroundStyle(Theme.accentGradient)
-                    .symbolEffect(.pulse, isActive: isSearching)
-            }
+    var body: some View {
+        VStack(spacing: compact ? 14 : 28) {
+            Spacer(minLength: compact ? 4 : 20)
+
+            Image("Logo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: compact ? 72 : 128, height: compact ? 72 : 128)
+                .shadow(color: Theme.accent.opacity(0.35), radius: 18, y: 8)
+                .phaseAnimator([1.0, 1.04]) { view, scale in
+                    view.scaleEffect(isSearching ? scale : 1)
+                } animation: { _ in .easeInOut(duration: 1.2) }
 
             VStack(spacing: 8) {
                 Text(title)
@@ -323,3 +377,30 @@ struct ConnectView: View {
         }
     }
 }
+
+
+#if os(iOS)
+/// Heart rate from the Apple Watch while it's recording the walk.
+struct WatchHeartBadge: View {
+    @ObservedObject var watch: WatchWorkoutLink
+
+    var body: some View {
+        if watch.isMirroring {
+            HStack(spacing: 6) {
+                Image(systemName: "heart.fill")
+                    .foregroundStyle(Color(red: 1.0, green: 0.27, blue: 0.33))
+                    .symbolEffect(.pulse, isActive: watch.heartRate != nil)
+                Text(watch.heartRate.map { "\(Int($0)) BPM" } ?? "Recording on Apple Watch")
+                    .monospacedDigit()
+                Image(systemName: "applewatch")
+                    .foregroundStyle(.secondary)
+            }
+            .font(.subheadline.weight(.medium))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(.thinMaterial, in: Capsule())
+            .transition(.opacity)
+        }
+    }
+}
+#endif

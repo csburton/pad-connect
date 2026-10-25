@@ -25,6 +25,7 @@ final class AppModel: ObservableObject {
 
     #if os(iOS)
     private let health = HealthWriter()
+    let watch = WatchWorkoutLink()
     #endif
 
     init() {
@@ -34,6 +35,10 @@ final class AppModel: ObservableObject {
         speedStepKmh = defaults.object(forKey: "speedStepKmh") as? Double ?? 0.5
         tracker = WorkoutTracker(bodyMassKg: mass)
         pad.onSample = { [weak self] sample in self?.handle(sample) }
+        #if os(iOS)
+        watch.onCommand = { [weak self] command in self?.handle(command) }
+        watch.onWatchEnded = { [weak self] in self?.watchEndedWalk() }
+        #endif
     }
 
     /// After a walk is finished or discarded the belt keeps winding down for a few
@@ -54,8 +59,15 @@ final class AppModel: ObservableObject {
             tracker = WorkoutTracker(bodyMassKg: bodyMassKg)
             isSessionActive = true
             saveMessage = nil
+            #if os(iOS)
+            watch.startWatchWorkout()
+            #endif
         }
         tracker.record(sample)
+        #if os(iOS)
+        watch.send(.padUpdate(speedKmh: sample.speedKmh, distanceMeters: tracker.distanceMeters,
+                              isBeltRunning: sample.speedKmh > 0))
+        #endif
 
         if sample.speedKmh == 0, let last = tracker.lastMovingDate,
            sample.date.timeIntervalSince(last) > Self.autoFinishAfter {
@@ -67,7 +79,18 @@ final class AppModel: ObservableObject {
         guard isSessionActive else { return }
         endSession()
         let finished = tracker
-        guard finished.distanceMeters >= 10 else {
+        let longEnough = finished.distanceMeters >= 10
+        #if os(iOS)
+        if watch.isMirroring {
+            // The Watch saves the workout, with its heart rate and the pad's distance.
+            watch.send(longEnough ? .finish : .discard)
+            saveMessage = longEnough
+                ? "Saved \(Format.distance(finished.distanceMeters)) to Apple Health from your Apple Watch."
+                : "Walk was too short to save."
+            return
+        }
+        #endif
+        guard longEnough else {
             saveMessage = "Walk was too short to save."
             return
         }
@@ -87,6 +110,9 @@ final class AppModel: ObservableObject {
 
     func discardSession() {
         guard isSessionActive else { return }
+        #if os(iOS)
+        watch.send(.discard)
+        #endif
         endSession()
         tracker = WorkoutTracker(bodyMassKg: bodyMassKg)
     }
@@ -105,6 +131,24 @@ final class AppModel: ObservableObject {
             pad.start()
         }
     }
+
+    #if os(iOS)
+    private func handle(_ command: WatchMessage.Command) {
+        switch command {
+        case .speedUp: pad.adjustSpeed(by: speedStepKmh)
+        case .speedDown: pad.adjustSpeed(by: -speedStepKmh)
+        case .toggleBelt: toggleBelt()
+        case .finish: finishSession()
+        }
+    }
+
+    /// The walk was ended (and saved or discarded) on the Watch.
+    private func watchEndedWalk() {
+        guard isSessionActive else { return }
+        endSession()
+        saveMessage = "Walk ended on your Apple Watch."
+    }
+    #endif
 
     func requestHealthAccess() {
         #if os(iOS)

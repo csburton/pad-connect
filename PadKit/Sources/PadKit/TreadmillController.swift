@@ -1,4 +1,4 @@
-#if canImport(CoreBluetooth)
+#if canImport(CoreBluetooth) && !os(watchOS)
 import Combine
 import CoreBluetooth
 import Foundation
@@ -22,6 +22,7 @@ public final class TreadmillController: NSObject, ObservableObject {
     public enum ProtocolKind: String {
         case ftms = "FTMS"
         case fitShow = "FitShow"
+        case simulated = "Simulated"
     }
 
     public struct DiscoveredPad: Identifiable, Equatable {
@@ -85,9 +86,18 @@ public final class TreadmillController: NSObject, ObservableObject {
     /// Speed to apply once the belt has actually started moving.
     private var pendingSpeedKmh: Double?
 
+    // Simulated pad (iOS Simulator only, which has no Bluetooth)
+    public static let simulatedPadID = UUID(uuidString: "5E1A7ED0-0000-4000-8000-000000000001")!
+    private var simTimer: Timer?
+    private var simTargetKmh: Double = 0
+    private var simSteps: Double = 0
+
     public override init() {
         super.init()
         central = CBCentralManager(delegate: self, queue: .main)
+        #if targetEnvironment(simulator)
+        discovered = [DiscoveredPad(id: Self.simulatedPadID, name: "Simulated pad", rssi: -40)]
+        #endif
     }
 
     // MARK: Scanning and connecting
@@ -106,6 +116,10 @@ public final class TreadmillController: NSObject, ObservableObject {
     }
 
     public func connect(_ id: UUID) {
+        if id == Self.simulatedPadID {
+            connectSimulated()
+            return
+        }
         guard let peripheral = peripherals[id] ?? central.retrievePeripherals(withIdentifiers: [id]).first else { return }
         central.stopScan()
         userDisconnected = false
@@ -121,6 +135,9 @@ public final class TreadmillController: NSObject, ObservableObject {
         pad = nil
         resetConnection()
         state = .idle
+        #if targetEnvironment(simulator)
+        discovered = [DiscoveredPad(id: Self.simulatedPadID, name: "Simulated pad", rssi: -40)]
+        #endif
     }
 
     // MARK: Control
@@ -135,6 +152,8 @@ public final class TreadmillController: NSObject, ObservableObject {
         case .fitShow:
             pendingSpeedKmh = target
             writeFitShow(.start)
+        case .simulated:
+            simTargetKmh = target ?? minimumSpeedKmh
         case nil:
             break
         }
@@ -145,6 +164,7 @@ public final class TreadmillController: NSObject, ObservableObject {
         switch protocolKind {
         case .ftms: sendFTMS(.stop)
         case .fitShow: writeFitShow(.stop)
+        case .simulated: simTargetKmh = 0
         case nil: break
         }
     }
@@ -154,6 +174,7 @@ public final class TreadmillController: NSObject, ObservableObject {
         switch protocolKind {
         case .ftms: sendFTMS(.pause)
         case .fitShow: writeFitShow(.pause)
+        case .simulated: simTargetKmh = 0
         case nil: break
         }
     }
@@ -167,13 +188,15 @@ public final class TreadmillController: NSObject, ObservableObject {
         switch protocolKind {
         case .ftms: sendFTMS(.setTargetSpeed(kmh: target))
         case .fitShow: writeFitShow(.setSpeed(kmh: target, incline: 0))
+        case .simulated: simTargetKmh = target
         case nil: break
         }
     }
 
     public func adjustSpeed(by delta: Double) {
         guard isBeltRunning else { return }
-        setSpeed((pendingSpeedKmh ?? speedKmh) + delta)
+        let current = protocolKind == .simulated ? simTargetKmh : (pendingSpeedKmh ?? speedKmh)
+        setSpeed(current + delta)
     }
 
     private func clampSpeed(_ kmh: Double) -> Double {
@@ -315,6 +338,9 @@ public final class TreadmillController: NSObject, ObservableObject {
     }
 
     private func resetConnection() {
+        simTimer?.invalidate()
+        simTimer = nil
+        simTargetKmh = 0
         pollTimer?.invalidate()
         pollTimer = nil
         ftmsTimeout?.invalidate()
@@ -355,10 +381,52 @@ public final class TreadmillController: NSObject, ObservableObject {
     }
 }
 
+// MARK: - Simulated pad
+
+extension TreadmillController {
+    /// A pretend pad for the iOS Simulator. It ramps speed up and down like the
+    /// real belt (including the wind-down after Stop) and makes up steps and heart rate.
+    private func connectSimulated() {
+        resetConnection()
+        pad = nil
+        protocolKind = .simulated
+        minimumSpeedKmh = 1.0
+        maximumSpeedKmh = 6.0
+        speedIncrementKmh = 0.1
+        simSteps = 0
+        state = .connected(name: "Simulated pad")
+        let interval: TimeInterval = 0.5
+        simTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            self?.tickSimulated(interval)
+        }
+    }
+
+    private func tickSimulated(_ dt: TimeInterval) {
+        // About 0.5 km/h per second each way, like the X386P.
+        let maxChange = 0.5 * dt
+        let delta = simTargetKmh - speedKmh
+        var speed = speedKmh + min(max(delta, -maxChange), maxChange)
+        if simTargetKmh == 0 && speed < minimumSpeedKmh * 0.5 { speed = 0 }
+        speed = (speed * 100).rounded() / 100
+
+        speedKmh = speed
+        isBeltRunning = speed > 0
+        if speed > 0 {
+            simSteps += speed / 3.6 * dt / 0.7 // ~0.7 m stride
+            heartRate = Int(85 + speed * 9 + Double.random(in: -2...2))
+        } else {
+            heartRate = nil
+        }
+        machineSteps = Int(simSteps)
+        emitSample()
+    }
+}
+
 // MARK: - CBCentralManagerDelegate
 
 extension TreadmillController: CBCentralManagerDelegate {
     public func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        guard protocolKind != .simulated else { return }
         switch central.state {
         case .poweredOn:
             if case .bluetoothOff = state { state = .idle }
