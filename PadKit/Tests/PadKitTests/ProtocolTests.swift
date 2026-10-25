@@ -119,3 +119,20 @@ final class WorkoutTrackerTests: XCTestCase {
         XCTAssertEqual(tracker.distanceMeters, 0)
     }
 }
+
+final class WatchMessageTests: XCTestCase {
+    func testRoundTrip() {
+        let messages: [WatchMessage] = [
+            .padUpdate(speedKmh: 4.5, distanceMeters: 1234.5, isBeltRunning: true),
+            .finish,
+            .discard,
+            .watchStats(heartRate: 112, activeKcal: 87.5),
+            .watchStats(heartRate: nil, activeKcal: 0),
+            .command(.speedUp),
+        ]
+        for message in messages {
+            XCTAssertEqual(WatchMessage(data: message.encoded()), message)
+        }
+        XCTAssertNil(WatchMessage(data: Data("nonsense".utf8)))
+    }
+}

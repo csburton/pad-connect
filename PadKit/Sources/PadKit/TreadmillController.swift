@@ -1,4 +1,4 @@
-#if canImport(CoreBluetooth)
+#if canImport(CoreBluetooth) && !os(watchOS)
 import Combine
 import CoreBluetooth
 import Foundation

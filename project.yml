@@ -5,6 +5,7 @@ options:
   deploymentTarget:
     iOS: "17.0"
     macOS: "14.0"
+    watchOS: "10.0"
   createIntermediateGroups: true
 
 settings:
@@ -27,6 +28,7 @@ targets:
       - App/iOS
     dependencies:
       - package: PadKit
+      - target: PadConnectWatch
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.csburton.padconnect
@@ -41,8 +43,16 @@ targets:
           UIApplicationSupportsMultipleScenes: false
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         UIBackgroundModes:
           - bluetooth-central
+          - workout-processing
         NSBluetoothAlwaysUsageDescription: PadConnect uses Bluetooth to control your walking pad.
         NSHealthShareUsageDescription: PadConnect saves your walks to Apple Health.
         NSHealthUpdateUsageDescription: PadConnect saves your walks to Apple Health.
@@ -75,3 +85,30 @@ targets:
       properties:
         com.apple.security.app-sandbox: true
         com.apple.security.device.bluetooth: true
+
+  PadConnectWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - App/watchOS
+    dependencies:
+      - package: PadKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.csburton.padconnect.watchkitapp
+        PRODUCT_NAME: PadConnectWatch
+    info:
+      path: App/watchOS/Info.plist
+      properties:
+        CFBundleDisplayName: PadConnect
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.csburton.padconnect
+        WKBackgroundModes:
+          - workout-processing
+        NSHealthShareUsageDescription: PadConnect reads your heart rate and calories during walks.
+        NSHealthUpdateUsageDescription: PadConnect saves your walks to Apple Health.
+    entitlements:
+      path: App/watchOS/PadConnect.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
