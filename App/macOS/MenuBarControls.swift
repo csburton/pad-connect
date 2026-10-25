@@ -7,57 +7,72 @@ struct MenuBarControls: View {
     @EnvironmentObject private var pad: TreadmillController
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             if case .connected(let name) = pad.state {
-                Text(name).font(.caption).foregroundStyle(.secondary)
-
-                HStack(spacing: 16) {
-                    Button { pad.adjustSpeed(by: -model.speedStepKmh) } label: {
-                        Image(systemName: "minus.circle.fill").font(.title)
-                    }
-                    .disabled(!pad.isBeltRunning)
-
-                    Text("\(Format.speed(pad.speedKmh)) km/h")
-                        .font(.title2.bold()).monospacedDigit()
-                        .frame(minWidth: 110)
-
-                    Button { pad.adjustSpeed(by: model.speedStepKmh) } label: {
-                        Image(systemName: "plus.circle.fill").font(.title)
-                    }
-                    .disabled(!pad.isBeltRunning)
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    pad.isBeltRunning ? pad.stop() : pad.start()
-                } label: {
-                    Label(pad.isBeltRunning ? "Stop" : "Start", systemImage: pad.isBeltRunning ? "stop.fill" : "play.fill")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(pad.isBeltRunning ? .red : .green)
-
-                HStack {
-                    Text(Format.duration(model.tracker.movingSeconds))
+                HStack(spacing: 6) {
+                    Circle().fill(Theme.accent).frame(width: 6, height: 6)
+                    Text(name).font(.caption.weight(.medium)).foregroundStyle(.secondary)
                     Spacer()
-                    Text(Format.distance(model.tracker.distanceMeters))
                 }
-                .font(.callout).monospacedDigit().foregroundStyle(.secondary)
 
-                if model.isSessionActive {
-                    Button("Finish walk") { model.finishSession() }
+                ZStack(alignment: .bottom) {
+                    SpeedDial(speed: pad.speedKmh, maximum: pad.maximumSpeedKmh, size: 150, lineWidth: 9)
+                    HStack {
+                        RoundIconButton(systemImage: "minus", size: 34) {
+                            pad.adjustSpeed(by: -model.speedStepKmh)
+                        }
+                        Spacer()
+                        RoundIconButton(systemImage: "plus", size: 34) {
+                            pad.adjustSpeed(by: model.speedStepKmh)
+                        }
+                    }
+                    .frame(width: 190)
+                    .disabled(!pad.isBeltRunning)
+                    .opacity(pad.isBeltRunning ? 1 : 0.35)
+                }
+
+                StartStopButton(isRunning: pad.isBeltRunning, height: 38) {
+                    model.toggleBelt()
+                }
+
+                StatsRow(seconds: model.tracker.movingSeconds,
+                         meters: model.tracker.distanceMeters,
+                         kcal: model.tracker.activeKcal,
+                         steps: model.tracker.steps,
+                         compact: true)
+
+                if model.isSessionActive && !pad.isBeltRunning {
+                    HStack {
+                        Button("Discard") { model.discardSession() }
+                        Spacer()
+                        Button("Finish & save") { model.finishSession() }
+                            .buttonStyle(.borderedProminent)
+                    }
+                    .controlSize(.small)
                 }
             } else {
-                Text("Walking pad not connected").foregroundStyle(.secondary)
-                Button("Open PadConnect") { NSApp.activate() }
+                VStack(spacing: 8) {
+                    Image(systemName: "figure.walk")
+                        .font(.title)
+                        .foregroundStyle(Theme.accentGradient)
+                    Text("Walking pad not connected")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Button("Open PadConnect") { NSApp.activate() }
+                        .controlSize(.small)
+                }
+                .padding(.vertical, 8)
             }
 
             Divider()
             Button("Quit PadConnect") { NSApp.terminate(nil) }
-                .buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
+                .buttonStyle(.plain)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
-        .padding()
-        .frame(width: 260)
+        .padding(16)
+        .frame(width: 280)
+        .tint(Theme.accent)
     }
 }
 

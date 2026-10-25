@@ -36,7 +36,19 @@ final class AppModel: ObservableObject {
         pad.onSample = { [weak self] sample in self?.handle(sample) }
     }
 
+    /// After a walk is finished or discarded the belt keeps winding down for a few
+    /// seconds; those readings must not start a new walk.
+    private var ignoringUntilBeltStops = false
+    private var lastSampleSpeed: Double = 0
+
     private func handle(_ sample: TreadmillSample) {
+        defer { lastSampleSpeed = sample.speedKmh }
+        if ignoringUntilBeltStops {
+            // Stopped, or sped up again (someone restarted it from the remote).
+            if sample.speedKmh == 0 { ignoringUntilBeltStops = false }
+            guard sample.speedKmh > lastSampleSpeed + 0.05 else { return }
+            ignoringUntilBeltStops = false
+        }
         if !isSessionActive {
             guard sample.speedKmh > 0 else { return }
             tracker = WorkoutTracker(bodyMassKg: bodyMassKg)
@@ -53,8 +65,7 @@ final class AppModel: ObservableObject {
 
     func finishSession() {
         guard isSessionActive else { return }
-        if pad.isBeltRunning { pad.stop() }
-        isSessionActive = false
+        endSession()
         let finished = tracker
         guard finished.distanceMeters >= 10 else {
             saveMessage = "Walk was too short to save."
@@ -75,8 +86,24 @@ final class AppModel: ObservableObject {
     }
 
     func discardSession() {
-        isSessionActive = false
+        guard isSessionActive else { return }
+        endSession()
         tracker = WorkoutTracker(bodyMassKg: bodyMassKg)
+    }
+
+    private func endSession() {
+        if pad.isBeltRunning { pad.stop() }
+        isSessionActive = false
+        ignoringUntilBeltStops = pad.isBeltRunning || lastSampleSpeed > 0
+    }
+
+    func toggleBelt() {
+        if pad.isBeltRunning {
+            pad.stop()
+        } else {
+            ignoringUntilBeltStops = false
+            pad.start()
+        }
     }
 
     func requestHealthAccess() {
