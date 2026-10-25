@@ -295,14 +295,14 @@ struct ConnectView: View {
         VStack(spacing: compact ? 14 : 28) {
             Spacer(minLength: compact ? 4 : 20)
 
-            ZStack {
-                Circle().fill(Theme.accent.opacity(0.10)).frame(width: compact ? 84 : 150, height: compact ? 84 : 150)
-                Circle().fill(Theme.accent.opacity(0.14)).frame(width: compact ? 60 : 104, height: compact ? 60 : 104)
-                Image(systemName: "figure.walk")
-                    .font(.system(size: compact ? 30 : 48, weight: .medium))
-                    .foregroundStyle(Theme.accentGradient)
-                    .symbolEffect(.pulse, isActive: isSearching)
-            }
+            Image("Logo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: compact ? 72 : 128, height: compact ? 72 : 128)
+                .shadow(color: Theme.accent.opacity(0.35), radius: 18, y: 8)
+                .phaseAnimator([1.0, 1.04]) { view, scale in
+                    view.scaleEffect(isSearching ? scale : 1)
+                } animation: { _ in .easeInOut(duration: 1.2) }
 
             VStack(spacing: 8) {
                 Text(title)

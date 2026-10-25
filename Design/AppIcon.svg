@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34D6A2"/>
+      <stop offset="1" stop-color="#0B8F84"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  
+  <g transform="translate(66,-68)">
+    <ellipse cx="512" cy="676" rx="380" ry="26" fill="#000" opacity="0.16"/>
+    <!-- speed lines -->
+    <g stroke="#FFFFFF" stroke-linecap="round" stroke-width="22" opacity="0.75">
+      <line x1="96" y1="505" x2="214" y2="505"/>
+      <line x1="40" y1="548" x2="172" y2="548"/>
+      <line x1="84" y1="591" x2="130" y2="591"/>
+    </g>
+    <!-- side and front faces -->
+    <polygon points="730,600 854,470 854,522 730,652" fill="#BFE6DC" stroke="#BFE6DC" stroke-width="16" stroke-linejoin="round"/>
+    <polygon points="170,600 730,600 730,652 170,652" fill="#E3F4EF" stroke="#E3F4EF" stroke-width="16" stroke-linejoin="round"/>
+    <!-- top deck -->
+    <polygon points="170,600 730,600 854,470 294,470" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="16" stroke-linejoin="round"/>
+    <!-- belt -->
+    <polygon points="214,586 618,586 718,484 314,484" fill="#1E2A2E" stroke="#1E2A2E" stroke-width="8" stroke-linejoin="round"/>
+    <g stroke="#34474D" stroke-width="5" stroke-linecap="round">
+      <line x1="262" y1="586" x2="362" y2="484"/>
+      <line x1="322" y1="586" x2="422" y2="484"/>
+      <line x1="382" y1="586" x2="482" y2="484"/>
+      <line x1="442" y1="586" x2="542" y2="484"/>
+      <line x1="502" y1="586" x2="602" y2="484"/>
+      <line x1="562" y1="586" x2="662" y2="484"/>
+    </g>
+    <!-- motor cover display -->
+    <polygon points="672,566 716,566 760,520 716,520" fill="#2ECC99" stroke="#2ECC99" stroke-width="10" stroke-linejoin="round"/>
+    <!-- front edge highlight -->
+    <line x1="182" y1="626" x2="718" y2="626" stroke="#C9E9E0" stroke-width="6" stroke-linecap="round"/>
+  </g>
+</svg>

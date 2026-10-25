@@ -26,9 +26,10 @@ struct WatchRootView: View {
 struct IdleView: View {
     var body: some View {
         VStack(spacing: 10) {
-            Image(systemName: "figure.walk")
-                .font(.system(size: 40, weight: .medium))
-                .foregroundStyle(accent)
+            Image("Logo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 56, height: 56)
             Text("PadConnect")
                 .font(.headline)
             Text("Start the pad from your iPhone and your walk will appear here.")
