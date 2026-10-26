@@ -23,6 +23,7 @@ packages:
 targets:
   PadConnect:
     type: application
+    scheme: {}
     platform: iOS
     sources:
       - App/Shared
@@ -88,6 +89,7 @@ targets:
 
   PadConnectMac:
     type: application
+    scheme: {}
     platform: macOS
     sources:
       - App/Shared
@@ -113,6 +115,7 @@ targets:
 
   PadConnectWatch:
     type: application
+    scheme: {}
     platform: watchOS
     sources:
       - App/watchOS
