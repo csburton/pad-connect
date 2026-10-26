@@ -24,7 +24,13 @@ xcodegen          # creates PadConnect.xcodeproj from project.yml
 open PadConnect.xcodeproj
 ```
 
-1. In Xcode, select the **PadConnect** target, open **Signing & Capabilities** and pick your team (your Apple ID works as a free "Personal Team").
+1. Set your signing team once, so it survives every `xcodegen` run. Create `Config/Signing.local.xcconfig` (it isn't committed) containing your team ID:
+
+   ```
+   DEVELOPMENT_TEAM = ABCDE12345
+   ```
+
+   Then run `xcodegen` again. To find your team ID, pick your team for the **PadConnect** target under **Signing & Capabilities** (your Apple ID works as a free "Personal Team"), then run `grep -m1 DEVELOPMENT_TEAM PadConnect.xcodeproj/project.pbxproj`.
 2. If Xcode says the bundle identifier is taken, change `com.csburton.padconnect` to something unique.
 3. Plug in your iPhone, select it as the run destination and press Run. The first time, approve the developer profile on the phone under Settings → General → VPN & Device Management.
 4. For the Mac, pick the **PadConnectMac** scheme and run it on "My Mac".

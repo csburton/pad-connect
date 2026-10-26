@@ -1,0 +1,7 @@
+// Signing settings shared by every target. Put your own team in
+// Signing.local.xcconfig (not committed), for example:
+//
+//     DEVELOPMENT_TEAM = ABCDE12345
+//
+// so it survives regenerating the project with xcodegen.
+#include? "Signing.local.xcconfig"
