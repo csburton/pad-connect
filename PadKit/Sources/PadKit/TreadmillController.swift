@@ -58,6 +58,7 @@ public final class TreadmillController: NSObject, ObservableObject {
 
     private static let lastPadKey = "lastPadIdentifier"
     private static let preferFitShowKey = "preferFitShow"
+    static let safetyStopMessage = "The pad reports its safety stop. If it has a safety key, check it is clipped in."
 
     private static let ftmsService = CBUUID(string: FTMS.serviceUUID)
     private static let fitShowServices = ([FitShow.serviceUUID] + FitShow.alternateServiceUUIDs).map { CBUUID(string: $0) }
@@ -286,7 +287,14 @@ public final class TreadmillController: NSObject, ObservableObject {
             inclinePercent = Double(report.incline)
             if let steps = report.steps { machineSteps = steps }
             heartRate = report.heartRate
-            if report.status == .safetyKey { lastError = "The safety key is out." }
+            // Status 6 is the safety stop in FitShow, but pads without a safety key can
+            // report it briefly (e.g. when stopped from the remote), so only show it while
+            // it lasts rather than leaving it on screen.
+            if report.status == .safetyKey {
+                lastError = Self.safetyStopMessage
+            } else if lastError == Self.safetyStopMessage {
+                lastError = nil
+            }
             if running, let target = pendingSpeedKmh {
                 pendingSpeedKmh = nil
                 writeFitShow(.setSpeed(kmh: target, incline: 0))
