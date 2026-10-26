@@ -21,6 +21,8 @@ final class WorkoutManager: NSObject, ObservableObject {
 
     @Published private(set) var phase: Phase = .idle
     @Published private(set) var heartRate: Double?
+    /// Health access to heart rate was turned off, so the walk can't record it.
+    @Published private(set) var isHeartRateDenied = false
     @Published private(set) var activeKcal: Double = 0
     @Published private(set) var speedKmh: Double = 0
     @Published private(set) var distanceMeters: Double = 0
@@ -32,6 +34,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     private var builder: HKLiveWorkoutBuilder?
     private var saveOnEnd = true
     private var isStarting = false
+    private var heartRateQuery: HKAnchoredObjectQuery?
 
     /// Pad distance already written to the workout, and when.
     private var recordedDistance: Double = 0
@@ -63,8 +66,12 @@ final class WorkoutManager: NSObject, ObservableObject {
             HKQuantityType(.activeEnergyBurned),
             HKQuantityType(.distanceWalkingRunning),
         ]
-        store.requestAuthorization(toShare: share, read: read) { _, _ in
-            DispatchQueue.main.async(execute: completion)
+        store.requestAuthorization(toShare: share, read: read) { [weak self] _, _ in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.isHeartRateDenied = self.store.authorizationStatus(for: HKQuantityType(.heartRate)) == .sharingDenied
+                completion()
+            }
         }
     }
 
@@ -100,6 +107,7 @@ final class WorkoutManager: NSObject, ObservableObject {
             let start = Date()
             session.startActivity(with: start)
             builder.beginCollection(withStart: start) { _, _ in }
+            startHeartRateQuery(from: start)
             session.startMirroringToCompanionDevice { [weak self] success, _ in
                 DispatchQueue.main.async { self?.isConnectedToPhone = success }
             }
@@ -160,6 +168,35 @@ final class WorkoutManager: NSObject, ObservableObject {
         builder.add([sample]) { _, _ in }
     }
 
+    /// Watches the heart rate samples the Watch saves during the walk. The live
+    /// builder's statistics should carry these too, but on some setups they never
+    /// arrive there, so this reads them directly as well.
+    private func startHeartRateQuery(from start: Date) {
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: nil, options: .strictStartDate)
+        let handler: (HKAnchoredObjectQuery, [HKSample]?, [HKDeletedObject]?, HKQueryAnchor?, Error?) -> Void = {
+            [weak self] _, samples, _, _, _ in
+            let bpm = HKUnit.count().unitDivided(by: .minute())
+            guard let latest = (samples as? [HKQuantitySample])?.max(by: { $0.endDate < $1.endDate }) else { return }
+            let value = latest.quantity.doubleValue(for: bpm)
+            DispatchQueue.main.async { self?.updateStats(heartRate: value, kcal: nil) }
+        }
+        let query = HKAnchoredObjectQuery(type: HKQuantityType(.heartRate), predicate: predicate,
+                                          anchor: nil, limit: HKObjectQueryNoLimit, resultsHandler: handler)
+        query.updateHandler = handler
+        heartRateQuery = query
+        store.execute(query)
+    }
+
+    private func updateStats(heartRate heart: Double?, kcal: Double?) {
+        if let heart { heartRate = heart }
+        if let kcal { activeKcal = kcal }
+        // A few updates a second is more than the iPhone needs.
+        if Date().timeIntervalSince(lastStatsSent) >= 2 {
+            lastStatsSent = Date()
+            send(.watchStats(heartRate: heartRate, activeKcal: activeKcal))
+        }
+    }
+
     private func resetStats() {
         heartRate = nil
         activeKcal = 0
@@ -199,6 +236,8 @@ final class WorkoutManager: NSObject, ObservableObject {
     }
 
     private func cleanUp() {
+        if let heartRateQuery { store.stop(heartRateQuery) }
+        heartRateQuery = nil
         session = nil
         builder = nil
         isConnectedToPhone = false
@@ -244,14 +283,6 @@ extension WorkoutManager: HKLiveWorkoutBuilderDelegate {
         let kcal = workoutBuilder.statistics(for: HKQuantityType(.activeEnergyBurned))?
             .sumQuantity()?.doubleValue(for: .kilocalorie())
 
-        DispatchQueue.main.async {
-            if let heart { self.heartRate = heart }
-            if let kcal { self.activeKcal = kcal }
-            // A few updates a second is more than the iPhone needs.
-            if Date().timeIntervalSince(self.lastStatsSent) >= 2 {
-                self.lastStatsSent = Date()
-                self.send(.watchStats(heartRate: self.heartRate, activeKcal: self.activeKcal))
-            }
-        }
+        DispatchQueue.main.async { self.updateStats(heartRate: heart, kcal: kcal) }
     }
 }

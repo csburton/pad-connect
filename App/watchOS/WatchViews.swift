@@ -63,9 +63,15 @@ struct MetricsView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "heart.fill").foregroundStyle(heartRed)
                         .symbolEffect(.pulse, isActive: workout.heartRate != nil)
-                    Text(workout.heartRate.map { String(Int($0)) } ?? "--")
-                        .monospacedDigit()
-                    Text("BPM").font(.caption2).foregroundStyle(.secondary)
+                    if workout.heartRate == nil && workout.isHeartRateDenied {
+                        Text("Allow in Health settings")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(workout.heartRate.map { String(Int($0)) } ?? "--")
+                            .monospacedDigit()
+                        Text("BPM").font(.caption2).foregroundStyle(.secondary)
+                    }
                 }
                 .font(.system(.title3, design: .rounded).weight(.medium))
 
