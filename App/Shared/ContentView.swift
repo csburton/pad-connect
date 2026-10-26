@@ -185,6 +185,14 @@ struct ControlView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
         }
 
+        if pad.isInStandby {
+            Label("The pad is in standby. Press any button on its remote to wake it.",
+                  systemImage: "moon.zzz")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+
         if let error = pad.lastError {
             Text(error)
                 .font(.footnote)

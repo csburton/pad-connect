@@ -43,6 +43,8 @@ public final class TreadmillController: NSObject, ObservableObject {
     @Published public private(set) var maximumSpeedKmh: Double = 6.0
     @Published public private(set) var speedIncrementKmh: Double = 0.1
     @Published public private(set) var lastError: String?
+    /// The pad has gone to sleep and ignores commands until a button on its remote is pressed.
+    @Published public private(set) var isInStandby = false
 
     /// Called for every reading from the pad, about once a second or faster.
     public var onSample: ((TreadmillSample) -> Void)?
@@ -58,7 +60,6 @@ public final class TreadmillController: NSObject, ObservableObject {
 
     private static let lastPadKey = "lastPadIdentifier"
     private static let preferFitShowKey = "preferFitShow"
-    static let safetyStopMessage = "The pad reports its safety stop. If it has a safety key, check it is clipped in."
 
     private static let ftmsService = CBUUID(string: FTMS.serviceUUID)
     private static let fitShowServices = ([FitShow.serviceUUID] + FitShow.alternateServiceUUIDs).map { CBUUID(string: $0) }
@@ -287,14 +288,7 @@ public final class TreadmillController: NSObject, ObservableObject {
             inclinePercent = Double(report.incline)
             if let steps = report.steps { machineSteps = steps }
             heartRate = report.heartRate
-            // Status 6 is the safety stop in FitShow, but pads without a safety key can
-            // report it briefly (e.g. when stopped from the remote), so only show it while
-            // it lasts rather than leaving it on screen.
-            if report.status == .safetyKey {
-                lastError = Self.safetyStopMessage
-            } else if lastError == Self.safetyStopMessage {
-                lastError = nil
-            }
+            isInStandby = report.status == .standby
             if running, let target = pendingSpeedKmh {
                 pendingSpeedKmh = nil
                 writeFitShow(.setSpeed(kmh: target, incline: 0))
@@ -364,6 +358,7 @@ public final class TreadmillController: NSObject, ObservableObject {
         protocolKind = nil
         pendingSpeedKmh = nil
         servicesAwaitingCharacteristics = 0
+        isInStandby = false
         if isBeltRunning || speedKmh > 0 {
             isBeltRunning = false
             speedKmh = 0

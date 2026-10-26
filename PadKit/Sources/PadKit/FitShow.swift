@@ -67,7 +67,9 @@ public enum FitShow {
         case running = 3
         case stopping = 4
         case error = 5
-        case safetyKey = 6
+        /// Called the safety-key stop in the protocol, but the X386P (which has no
+        /// key) reports it when it goes into standby.
+        case standby = 6
         case study = 7
         case paused = 10
     }
