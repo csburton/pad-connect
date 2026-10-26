@@ -177,7 +177,7 @@ struct ControlView: View {
             .padding(.top, 4)
 
         #if os(iOS)
-        WatchHeartBadge(watch: model.watch)
+        HeartRateBadge(watch: model.watch, padHeartRate: pad.heartRate)
         #endif
 
         if showsPausedCard {
@@ -380,20 +380,27 @@ struct ConnectView: View {
 
 
 #if os(iOS)
-/// Heart rate from the Apple Watch while it's recording the walk.
-struct WatchHeartBadge: View {
+/// Heart rate during the walk: from the Apple Watch while it's recording the
+/// walk, otherwise from the pad's hand-grip sensors if it reports any.
+struct HeartRateBadge: View {
     @ObservedObject var watch: WatchWorkoutLink
+    let padHeartRate: Int?
+
+    private var bpm: Int? { watch.heartRate.map { Int($0.rounded()) } ?? padHeartRate }
 
     var body: some View {
-        if watch.isMirroring {
+        if watch.isMirroring || bpm != nil {
             HStack(spacing: 6) {
                 Image(systemName: "heart.fill")
                     .foregroundStyle(Color(red: 1.0, green: 0.27, blue: 0.33))
-                    .symbolEffect(.pulse, isActive: watch.heartRate != nil)
-                Text(watch.heartRate.map { "\(Int($0)) BPM" } ?? "Recording on Apple Watch")
+                    .symbolEffect(.pulse, isActive: bpm != nil)
+                Text(bpm.map { "\($0) BPM" } ?? "Recording on Apple Watch")
                     .monospacedDigit()
-                Image(systemName: "applewatch")
-                    .foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
+                if watch.isMirroring {
+                    Image(systemName: "applewatch")
+                        .foregroundStyle(.secondary)
+                }
             }
             .font(.subheadline.weight(.medium))
             .padding(.horizontal, 14)
