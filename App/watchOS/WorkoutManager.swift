@@ -31,6 +31,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     private var session: HKWorkoutSession?
     private var builder: HKLiveWorkoutBuilder?
     private var saveOnEnd = true
+    private var isStarting = false
 
     /// Pad distance already written to the workout, and when.
     private var recordedDistance: Double = 0
@@ -45,9 +46,14 @@ final class WorkoutManager: NSObject, ObservableObject {
 
     // MARK: Authorization
 
-    func requestAuthorization() {
+    /// Asks for Health access, and calls back once the person has answered (or
+    /// straight away if they already have). The live data source only collects
+    /// what the app may read when the workout starts, so a walk must not begin
+    /// before this finishes or it runs without heart rate.
+    func requestAuthorization(then completion: @escaping () -> Void = {}) {
         let share: Set<HKSampleType> = [
             HKObjectType.workoutType(),
+            HKQuantityType(.heartRate),
             HKQuantityType(.distanceWalkingRunning),
             HKQuantityType(.activeEnergyBurned),
         ]
@@ -57,12 +63,23 @@ final class WorkoutManager: NSObject, ObservableObject {
             HKQuantityType(.activeEnergyBurned),
             HKQuantityType(.distanceWalkingRunning),
         ]
-        store.requestAuthorization(toShare: share, read: read) { _, _ in }
+        store.requestAuthorization(toShare: share, read: read) { _, _ in
+            DispatchQueue.main.async(execute: completion)
+        }
     }
 
     // MARK: Lifecycle
 
     func start(with configuration: HKWorkoutConfiguration) {
+        guard session == nil, !isStarting else { return }
+        isStarting = true
+        requestAuthorization { [weak self] in
+            self?.isStarting = false
+            self?.beginWorkout(with: configuration)
+        }
+    }
+
+    private func beginWorkout(with configuration: HKWorkoutConfiguration) {
         guard session == nil else { return }
         do {
             let session = try HKWorkoutSession(healthStore: store, configuration: configuration)
