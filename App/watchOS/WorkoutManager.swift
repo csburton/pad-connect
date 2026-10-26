@@ -94,6 +94,8 @@ final class WorkoutManager: NSObject, ObservableObject {
             let dataSource = HKLiveWorkoutDataSource(healthStore: store, workoutConfiguration: configuration)
             // Distance comes from the pad, not from wrist movement.
             dataSource.disableCollection(for: HKQuantityType(.distanceWalkingRunning))
+            // Ask for heart rate explicitly rather than relying on the configuration's defaults.
+            dataSource.enableCollection(for: HKQuantityType(.heartRate), predicate: nil)
             builder.dataSource = dataSource
             session.delegate = self
             builder.delegate = self

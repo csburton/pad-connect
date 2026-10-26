@@ -153,7 +153,16 @@ public final class TreadmillController: NSObject, ObservableObject {
             sendFTMS(.startOrResume)
         case .fitShow:
             pendingSpeedKmh = target
-            writeFitShow(.start)
+            if isInStandby {
+                // Unverified: there's no documented wake command, so try resetting the
+                // pad with a stop before starting, as a remote button press seems to.
+                writeFitShow(.stop)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    self?.writeFitShow(.start)
+                }
+            } else {
+                writeFitShow(.start)
+            }
         case .simulated:
             simTargetKmh = target ?? minimumSpeedKmh
         case nil:
