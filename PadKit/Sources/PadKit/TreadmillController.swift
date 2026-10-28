@@ -154,8 +154,8 @@ public final class TreadmillController: NSObject, ObservableObject {
         case .fitShow:
             pendingSpeedKmh = target
             if isInStandby {
-                // Unverified: there's no documented wake command, so try resetting the
-                // pad with a stop before starting, as a remote button press seems to.
+                // There's no documented wake command, but a stop before the start wakes
+                // the X386P from standby (checked on the pad).
                 writeFitShow(.stop)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                     self?.writeFitShow(.start)
