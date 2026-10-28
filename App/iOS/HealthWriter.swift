@@ -17,7 +17,15 @@ final class HealthWriter {
 
     func requestAuthorization() async throws {
         guard HKHealthStore.isHealthDataAvailable() else { return }
-        try await store.requestAuthorization(toShare: shareTypes, read: [])
+        // The Watch app shares this app's Health permissions, and reads heart rate
+        // during the walk, so ask for read access here too or it never gets asked.
+        let readTypes: Set<HKObjectType> = [
+            HKObjectType.workoutType(),
+            HKQuantityType(.heartRate),
+            HKQuantityType(.activeEnergyBurned),
+            HKQuantityType(.distanceWalkingRunning),
+        ]
+        try await store.requestAuthorization(toShare: shareTypes, read: readTypes)
     }
 
     func save(_ walk: WorkoutTracker) async throws {
