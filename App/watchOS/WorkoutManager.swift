@@ -21,8 +21,8 @@ final class WorkoutManager: NSObject, ObservableObject {
 
     @Published private(set) var phase: Phase = .idle
     @Published private(set) var heartRate: Double?
-    /// Health access to heart rate was turned off, so the walk can't record it.
-    @Published private(set) var isHeartRateDenied = false
+    /// Why heart rate may be missing, when Health access to it isn't granted.
+    @Published private(set) var heartRateAccessNote: String?
     @Published private(set) var activeKcal: Double = 0
     @Published private(set) var speedKmh: Double = 0
     @Published private(set) var distanceMeters: Double = 0
@@ -69,7 +69,11 @@ final class WorkoutManager: NSObject, ObservableObject {
         store.requestAuthorization(toShare: share, read: read) { [weak self] _, _ in
             DispatchQueue.main.async {
                 guard let self else { return }
-                self.isHeartRateDenied = self.store.authorizationStatus(for: HKQuantityType(.heartRate)) == .sharingDenied
+                switch self.store.authorizationStatus(for: HKQuantityType(.heartRate)) {
+                case .sharingAuthorized: self.heartRateAccessNote = nil
+                case .sharingDenied: self.heartRateAccessNote = "Heart rate is off in Health settings"
+                default: self.heartRateAccessNote = "Health hasn't asked about heart rate yet"
+                }
                 completion()
             }
         }

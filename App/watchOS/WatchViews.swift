@@ -36,6 +36,9 @@ struct IdleView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+            Text("Build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?")")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
         }
         .padding()
     }
@@ -63,8 +66,8 @@ struct MetricsView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "heart.fill").foregroundStyle(heartRed)
                         .symbolEffect(.pulse, isActive: workout.heartRate != nil)
-                    if workout.heartRate == nil && workout.isHeartRateDenied {
-                        Text("Allow in Health settings")
+                    if workout.heartRate == nil, let note = workout.heartRateAccessNote {
+                        Text(note)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     } else {
