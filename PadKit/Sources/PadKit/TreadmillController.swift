@@ -43,6 +43,8 @@ public final class TreadmillController: NSObject, ObservableObject {
     @Published public private(set) var maximumSpeedKmh: Double = 6.0
     @Published public private(set) var speedIncrementKmh: Double = 0.1
     @Published public private(set) var lastError: String?
+    /// The pad has gone to sleep and ignores commands until a button on its remote is pressed.
+    @Published public private(set) var isInStandby = false
 
     /// Called for every reading from the pad, about once a second or faster.
     public var onSample: ((TreadmillSample) -> Void)?
@@ -151,7 +153,16 @@ public final class TreadmillController: NSObject, ObservableObject {
             sendFTMS(.startOrResume)
         case .fitShow:
             pendingSpeedKmh = target
-            writeFitShow(.start)
+            if isInStandby {
+                // There's no documented wake command, but a stop before the start wakes
+                // the X386P from standby (checked on the pad).
+                writeFitShow(.stop)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    self?.writeFitShow(.start)
+                }
+            } else {
+                writeFitShow(.start)
+            }
         case .simulated:
             simTargetKmh = target ?? minimumSpeedKmh
         case nil:
@@ -286,7 +297,7 @@ public final class TreadmillController: NSObject, ObservableObject {
             inclinePercent = Double(report.incline)
             if let steps = report.steps { machineSteps = steps }
             heartRate = report.heartRate
-            if report.status == .safetyKey { lastError = "The safety key is out." }
+            isInStandby = report.status == .standby
             if running, let target = pendingSpeedKmh {
                 pendingSpeedKmh = nil
                 writeFitShow(.setSpeed(kmh: target, incline: 0))
@@ -356,6 +367,7 @@ public final class TreadmillController: NSObject, ObservableObject {
         protocolKind = nil
         pendingSpeedKmh = nil
         servicesAwaitingCharacteristics = 0
+        isInStandby = false
         if isBeltRunning || speedKmh > 0 {
             isBeltRunning = false
             speedKmh = 0

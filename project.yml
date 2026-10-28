@@ -8,11 +8,15 @@ options:
     watchOS: "10.0"
   createIntermediateGroups: true
 
+configFiles:
+  Debug: Config/Signing.xcconfig
+  Release: Config/Signing.xcconfig
+
 settings:
   base:
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    CURRENT_PROJECT_VERSION: "4"
     CODE_SIGN_STYLE: Automatic
     ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
@@ -23,14 +27,17 @@ packages:
 targets:
   PadConnect:
     type: application
+    scheme: {}
     platform: iOS
     sources:
       - App/Shared
       - App/iOS
+      - App/LiveActivity
       - App/Resources
     dependencies:
       - package: PadKit
       - target: PadConnectWatch
+      - target: PadConnectWidgets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.csburton.padconnect
@@ -41,6 +48,7 @@ targets:
       properties:
         CFBundleDisplayName: PadConnect
         UILaunchScreen: {}
+        NSSupportsLiveActivities: true
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UISupportedInterfaceOrientations:
@@ -56,7 +64,7 @@ targets:
           - bluetooth-central
           - workout-processing
         NSBluetoothAlwaysUsageDescription: PadConnect uses Bluetooth to control your walking pad.
-        NSHealthShareUsageDescription: PadConnect saves your walks to Apple Health.
+        NSHealthShareUsageDescription: PadConnect shows your heart rate from Apple Watch during walks.
         NSHealthUpdateUsageDescription: PadConnect saves your walks to Apple Health.
     entitlements:
       path: App/iOS/PadConnect.entitlements
@@ -64,8 +72,28 @@ targets:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
 
+  PadConnectWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - App/Widgets
+      - App/LiveActivity
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.csburton.padconnect.widgets
+        PRODUCT_NAME: PadConnectWidgets
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+    info:
+      path: App/Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: PadConnect
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
   PadConnectMac:
     type: application
+    scheme: {}
     platform: macOS
     sources:
       - App/Shared
@@ -91,6 +119,7 @@ targets:
 
   PadConnectWatch:
     type: application
+    scheme: {}
     platform: watchOS
     sources:
       - App/watchOS
