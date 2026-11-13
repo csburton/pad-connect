@@ -35,7 +35,19 @@ open PadConnect.xcodeproj
 3. Plug in your iPhone, select it as the run destination and press Run. The first time, approve the developer profile on the phone under Settings → General → VPN & Device Management.
 4. For the Mac, pick the **PadConnectMac** scheme and run it on "My Mac".
 
-With a free Apple ID, apps installed on the phone stop launching after 7 days and need re-running from Xcode. A paid Apple Developer account removes that limit and allows TestFlight.
+With a free Apple ID, apps installed on the phone stop launching after 7 days and need re-running from Xcode.
+
+### Installing for a year (paid Apple Developer account)
+
+With a paid Apple Developer Program membership, an install from Xcode keeps working for a year, without the App Store or TestFlight.
+
+1. In Xcode, open **Settings → Accounts**, select your Apple ID and check that a team appears that is *not* labelled "Personal Team". New memberships can take up to 48 hours to show up.
+2. Find that team's ID at [developer.apple.com/account](https://developer.apple.com/account) under **Membership details** (10 characters, such as `ABCDE12345`). It is different from your Personal Team's ID.
+3. Put it in `Config/Signing.local.xcconfig` in place of the old one, then run `xcodegen` again.
+4. Plug in the iPhone (with the Watch paired and nearby), pick it as the run destination and press Run. Xcode registers the iPhone and Watch with your team and makes a development profile for each target. If it says the bundle identifier isn't available, it is still held by your Personal Team: change `com.csburton` in `project.yml` to something new and run `xcodegen` again.
+5. On the phone, trust the new developer profile under **Settings → General → VPN & Device Management** if asked.
+
+The app then runs until the profile expires, one year after Xcode made it. To renew, press Run in Xcode again any time before then (a calendar reminder helps); Health data and settings are kept.
 
 Run the protocol unit tests with `swift test` inside `PadKit/`.
 
